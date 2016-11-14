@@ -50,34 +50,34 @@ for i = 1:n
         y = data(i,ssy(i,:))';
 
         sky_o = [mean(x), mean(y)];
-        
-        
-        robot(i,:) = robot_o - sky_o;
+        v = robot_o - sky_o;
+        th = atan2(v(2),v(1));
+        robot(i,:) = [cos(th), sin(th)];
     end
 end
 
 % Calculate movement vectors
 move = robot - [robot(1,:);robot(1:end-1,:)];
 for i = 1:n
-    move(i,:) = 70*move(i,:)/norm(move(i,:));
+    move(i,:) = 0.25*move(i,:)/norm(move(i,:));
 end
 
 % Plot robot path
 figure(1);
 title('Robot Path');
-axis([0 1024 0 768]);
+% axis([0 1024 0 768]);
 plot(robot(:,1), robot(:,2));
 
 % % Animate robot
 % figure(2);
 % title('Robot Path Animated');
 % hold on;
-% axis([0 1024 0 768]);
+% axis([-2 2 -2 2]);
 % for i = 2:n
 %     r = plot(robot(i,1), robot(i,2),'k+');
 %     q = quiver(robot(i,1), robot(i,2), move(i,1), move(i,2),...
 %         'AutoScale','off','MaxHeadSize',0.8,'Color','k');
-%     pause(0.003);
+%     pause(0.002);
 %     delete(r);
 %     delete(q);
 % end

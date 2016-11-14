@@ -5,7 +5,7 @@ clear all;
 % https://www.pozyx.io/Documentation/doc_howDoesPositioningWork
 
 % Load data
-load('C.mat');
+load('A.mat');
 
 % Preprocess
 data = rawStarData;
@@ -73,7 +73,7 @@ for i = 1:n
     d = di(1:end-1); dn = di(end);
     
     A = -2*[x-xn y-yn];
-    b = dn - x.^2 - y.^2 - dn + xn^2 + yn^2;
+    b = d - x.^2 - y.^2 - dn + xn^2 + yn^2;
     
     if (numStars(i) == 3)
         robot(i,:) = (b\A)';
