@@ -1,7 +1,7 @@
 close all;
 clear all;
 
-load('A.mat');
+load('C.mat');
 
 % Preprocess
 data = rawStarData;

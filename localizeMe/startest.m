@@ -10,8 +10,6 @@ load('A.mat');
 % Preprocess
 data = rawStarData;
 n = size(data,1);
-cx = 1024/2;
-cy = 768/2;
 for i = 1:2:8
     check1 = data(:,i) == 1023;
     check2 = data(:,i+1) == 1023;
@@ -20,9 +18,7 @@ for i = 1:2:8
     data(check,i+1) = NaN;
 end
 
-% Scale
 data = data - 512;
-data(:,[2,4,6,8]) = data(:,[2,4,6,8]) * (768/1023);
 
 % Assign the data
 star1 = data(:,1:2);
@@ -62,8 +58,7 @@ for i = 1:n
         end
         continue;
     end
-    
-    N = numStars(i);
+
     sx = data(i,ssx(i,:))';
     sy = data(i,ssy(i,:))';
     di = dd(i,dg(i,:))';
@@ -82,59 +77,7 @@ for i = 1:n
     end
 end
 
-% Calculate movement vectors
-move = robot - [robot(1,:);robot(1:end-1,:)];
-for i = 1:n
-    move(i,:) = 70*move(i,:)/norm(move(i,:));
-end
-
-% Animate sky
-% figure;
-% hold on;
-% axis([0 1024 0 768]);
-% plot(cx,cy,'k+');
-% for i = 1:n   
-%     Plot the stars
-%     s1 = plot(star1(i,1),star1(i,2),'ro');
-%     s2 = plot(star2(i,1),star2(i,2),'bo');
-%     s3 = plot(star3(i,1),star3(i,2),'go');
-%     s4 = plot(star4(i,1),star4(i,2),'co');
-%     
-%     di = dd(i,dg(i,:))';
-%     
-%     Plot circles
-%     c1 = viscircles(star1(i,:),
-%     
-%     Animation delay
-%     pause(0.003);
-%     
-%     Clear the stars
-%     delete(s1);
-%     delete(s2);
-%     delete(s3);
-%     delete(s4);
-%     
-% end
-
 % Plot robot path
-figure(1);
-title('Robot Path');
-axis([0 1024 0 768]);
-plot(robot(:,1), robot(:,2));
-
-% % Animate robot
-% figure(2);
-% title('Robot Path Animated');
-% hold on;
-% axis([0 1024 0 768]);
-% for i = 2:n
-%     figure(2);
-%     r = plot(robot(i,1), robot(i,2),'k+');
-%     q = quiver(robot(i,1), robot(i,2), move(i,1), move(i,2),...
-%         'AutoScale','off','MaxHeadSize',0.8,'Color','k');
-%     pause(0.003);
-%     delete(r);
-%     delete(q);
-% end
+plot(robot(:,1), robot(:,2), 'r-');
     
     
