@@ -28,7 +28,7 @@ d24 = [sqrt(sum(pt2-pt4).^2) 2 4];
 d34 = [sqrt(sum(pt3-pt4).^2) 3 4];
 
 dc = [d12',d13',d14',d23',d24',d34'];
-[d_c, I_c] = sort(dc(1,:),'descend');
+[d_c, I_c] = sort(dc(1,:),'ascend');
 
 ns1 = dc(2,I_c(1));
 ns2 = dc(3,I_c(1));
@@ -37,21 +37,21 @@ p2 = pts(ns2,:);
 d1 = sqrt(sum(p1-cen).^2);
 d2 = sqrt(sum(p2-cen).^2);
 
-% if (d1 > d2)
-%     sr = ns1;
-%     nr = ns2;
-% else
-%     sr = ns2;
-%     nr = ns1;
-% end
+if (d1 > d2)
+    sr = ns1;
+    nr = ns2;
+else
+    sr = ns2;
+    nr = ns1;
+end
 
-% a = [1,2,3,4];
-% b = (a == nr | a == sr);
-% c = a(~b);
-% er = c(1);
-% wr = c(2);
-nr = 4;
-sr = 1;
-er = 3;
-wr = 2;
+a = [1,2,3,4];
+b = (a == nr | a == sr);
+c = a(~b);
+er = c(1);
+wr = c(2);
+% nr = 4;
+% sr = 1;
+% er = 3;
+% wr = 2;
 end
