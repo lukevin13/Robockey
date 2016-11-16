@@ -50,8 +50,8 @@ d2 = sqrt(sum(p2-cen).^2);
 % c = a(~b);
 % er = c(1);
 % wr = c(2);
-nr = 2;
-sr = 4;
-er = 1;
-wr = 3;
+nr = 4;
+sr = 1;
+er = 3;
+wr = 2;
 end
