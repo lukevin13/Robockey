@@ -3,6 +3,7 @@
 #include "m_rf.h"
 #include "m_usb.h"
 #include "m_wii.h"
+#include "localize.h"
 
 #define SERIAL_DEBUG	0
 #define CHANNEL			0
