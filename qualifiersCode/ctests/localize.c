@@ -52,7 +52,7 @@ int countNumStars(unsigned int* x, unsigned int* y) {
 	for (i=0;i<4;i++) {
 		if (x[i] == 1023 && y[i] == 1023) numStars++;
 	}
-	return numStars;
+	return 4-numStars;
 }
 
 int localize_me(double* r_pos, unsigned int* x, unsigned int* y) {
