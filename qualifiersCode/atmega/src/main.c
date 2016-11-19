@@ -20,6 +20,8 @@
 // Volatiles
 volatile int state = 0;	// Robot state. 0: idle, 1:playing
 volatile int rf_flag = 0;
+volatile int score_red = 0;
+volatile int score_blue = 0;
 
 void init();
 void print_location(double* position);
@@ -35,26 +37,28 @@ int main() {
 
 	while (1) {
 		if (rf_flag) {
+			rf_flag = 0;
 			m_rf_read(m_rf_buffer, PACKET_LENGTH);
 			m_rf_process_state(m_rf_buffer);
 		}
 
-		// Read from mWii and process data
+		Read from mWii and process data
 		mWii_read = m_wii_read(mWii_buffer);
 		if (mWii_read) {
 			unsigned int x[4] = {mWii_buffer[0], mWii_buffer[3], mWii_buffer[6], mWii_buffer[9]};
 			unsigned int y[4] = {mWii_buffer[1], mWii_buffer[4], mWii_buffer[7], mWii_buffer[10]};
+			
 			if (localize_me(r_pos, x, y)) {
 
 			} else {
 
 			}
 
-			if (SERIAL_DEBUG) {
-				print_mWii_data(mWii_buffer);
-				print_location(r_pos);
-			}
+			if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
+			
 		}
+
+		if (SERIAL_DEBUG) print_location(r_pos);
 	}
 
 	return 1;
@@ -111,16 +115,14 @@ int command_check(char* buffer, char command) {
 void m_rf_process_state(char* buffer) {
 	// Gameplay state checks
 	if (command_check(buffer, COM_COMTEST)) state = 0;
-	if (command_check(buffer, COM_PLAY)) state = 1;
-	if (command_check(buffer, COM_HALFTIME)) state = 0;
-	if (command_check(buffer, COM_GAMEOVER)) state = 0;
-	if (command_check(buffer, COM_PAUSE)) state = 0;
+	else if (command_check(buffer, COM_PLAY)) state = 1;
+	else if (command_check(buffer, COM_HALFTIME)) state = 0;
+	else if (command_check(buffer, COM_GAMEOVER)) state = 0;
+	else if (command_check(buffer, COM_PAUSE)) state = 0;
 
 	// Update scores and switch to idle state
-	if (buffer[0] == 0xA2) {
-
-	}
-	if (buffer[0] == 0xA3) {
-
+	if (buffer[0] == 0xA2 || buffer[0] == 0xA3) {
+		score_red = buffer[1];
+		score_blue = buffer[2];
 	}
 }

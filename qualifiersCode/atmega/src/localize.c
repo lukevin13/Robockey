@@ -55,9 +55,8 @@ int countNumStars(unsigned int* x, unsigned int* y) {
 	return 4-numStars;
 }
 
-int localize_me(double* r_pos, unsigned int* x, unsigned int* y) {
+int localize_me(double* r_pos, unsigned int* x, unsigned int* y, int numStars) {
 	// Setup
-	int numStars = countNumStars(x, y);
 	int n = nchoosek(numStars);
 	double distances[n];
 	int point1[n];
