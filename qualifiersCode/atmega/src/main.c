@@ -29,6 +29,7 @@ void print_mWii_data(unsigned int* data);
 void m_rf_process_state(char* buffer);
 void pwm_setup();
 void timer_setup();
+void turn_off_wheels();
 
 int main() {
 	init();
@@ -163,9 +164,18 @@ void m_rf_process_state(char* buffer) {
 		state = 1;
 		m_green(ON);
 	}
-	else if (command_check(buffer, COM_HALFTIME)) state = 0;
-	else if (command_check(buffer, COM_GAMEOVER)) state = 0;
-	else if (command_check(buffer, COM_PAUSE)) state = 0;
+	else if (command_check(buffer, COM_HALFTIME)) {
+		state = 0;
+		turn_off_wheels();
+	}
+	else if (command_check(buffer, COM_GAMEOVER)) {
+		state = 0;
+		turn_off_wheels();
+	}
+	else if (command_check(buffer, COM_PAUSE)) {
+		state = 0;
+		turn_off_wheels();
+	}
 
 	// Update scores and switch to idle state
 	if (buffer[0] == 0xA2 || buffer[0] == 0xA3) {
@@ -202,6 +212,11 @@ void pwm_setup() {
 
 	// Start timer
 	set(TCCR1B, CS10);
+}
+
+void turn_off_wheels() {
+	OCR1B = 0;
+	OCR1C = 0;
 }
 
 void timer_setup() {
