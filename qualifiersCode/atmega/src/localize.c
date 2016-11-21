@@ -36,7 +36,7 @@ double mean(double* data, int n) {
 	return sum/n;
 }
 
-double mean_i(unsigned int* data, int n) {
+double mean_i(int* data, int n) {
 	double sum = 0;
 	int i;
 	for (i=0;i<n;i++) {
@@ -46,16 +46,16 @@ double mean_i(unsigned int* data, int n) {
 	return sum/n;
 }
 
-int countNumStars(unsigned int* x, unsigned int* y) {
+int countNumStars(int* x, int* y) {
 	int i;
 	int numStars = 0;
 	for (i=0;i<4;i++) {
-		if (x[i] == 1023 && y[i] == 1023) numStars++;
+		if (x[i] == 511 && y[i] == 511) numStars++;
 	}
 	return 4-numStars;
 }
 
-int localize_me(double* r_pos, unsigned int* x, unsigned int* y, int numStars) {
+int localize_me(double* r_pos, int* x, int* y, int numStars) {
 	// Setup
 	int n = nchoosek(numStars);
 	double distances[n];

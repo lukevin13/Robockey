@@ -35,33 +35,39 @@ int main() {
 	double r_pos[2] = {0.0, 0.0};
 	unsigned int mWii_buffer[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	char m_rf_buffer[PACKET_LENGTH];
-	m_usb_tx_string("Hello World!\r\n");
 
 	while (1) {
-		// if (rf_flag) {
-		// 	rf_flag = 0;
-		// 	m_rf_read(m_rf_buffer, PACKET_LENGTH);
-		// 	m_rf_process_state(m_rf_buffer);
-		// }
+		if (rf_flag) {
+			rf_flag = 0;
+			m_rf_read(m_rf_buffer, PACKET_LENGTH);
+			m_rf_process_state(m_rf_buffer);
+		}
 
 		// Read from mWii and process data
-		// mWii_read = m_wii_read(mWii_buffer);
-		// if (mWii_read) {
-		
-			
-		// 	if (localize_me(r_pos, x, y)) {
-
-		// 	} else {
-
-		// 	}
-		// }
 		mWii_read = m_wii_read(mWii_buffer);
-		unsigned int x[4] = {mWii_buffer[0], mWii_buffer[3], mWii_buffer[6], mWii_buffer[9]};
-		unsigned int y[4] = {mWii_buffer[1], mWii_buffer[4], mWii_buffer[7], mWii_buffer[10]};
-		int numStars = countNumStars(x, y);
-		localize_me(r_pos,x,y,numStars);
-		if (mWii_read) m_usb_tx_string("mWii read\r\n");
-		if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
+		if (mWii_read) {
+			int x[4] = {
+				mWii_buffer[0]-512, 
+				mWii_buffer[3]-512, 
+				mWii_buffer[6]-512, 
+				mWii_buffer[9]-512
+			};
+			int y[4] = {
+				mWii_buffer[1]-512, 
+				mWii_buffer[4]-512, 
+				mWii_buffer[7]-512, 
+				mWii_buffer[10]-512
+			};
+			int numStars = countNumStars(x, y);
+			if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
+			
+			if (localize_me(r_pos,x,y,numStars)) {
+
+			} else {
+
+			}
+		}
+
 		if (SERIAL_DEBUG) print_location(r_pos);
 	}
 
@@ -75,16 +81,17 @@ void init() {
 	sei();
 	m_bus_init();
 	m_usb_init();
-	// set(DDRB, 5);
-	// set(DDRB, 6);
-	// set(DDRB, 7);
-	// set(DDRB, 0);
-	// set(DDRB, 1);
-	// clear(PORTB, 0);
-	// clear(PORTB, 1);
 
-	// pwm_setup();
-	// while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
+	set(DDRB, 5);
+	set(DDRB, 6);
+	set(DDRB, 7);
+	set(DDRB, 0);
+	set(DDRB, 1);
+	clear(PORTB, 0);
+	clear(PORTB, 1);
+
+	pwm_setup();
+	while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
 	while (!m_usb_isconnected() & SERIAL_DEBUG);
 	while (!m_wii_open());
 
