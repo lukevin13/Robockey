@@ -53,6 +53,8 @@ int main() {
 				mWii_buffer[6]-512, 
 				mWii_buffer[9]-512
 			};
+
+			// Pin hole camera flips the y axis
 			int y[4] = {
 				mWii_buffer[1] + -512, 
 				mWii_buffer[4] + -512, 
