@@ -134,7 +134,7 @@ int localize_me(double* th, double* r_pos, int* x, int* y, int numStars) {
 	double y_th = atan2(world_y[1], world_y[0]);
 	double r_th = atan2(1, 0);
 	double theta = r_th - y_th;
-	th[0] = theta;
+	th[0] = theta*180.0/3.14;
 	// printf("theta: %f\r\n", theta);
 
 	// Calculate robot position
