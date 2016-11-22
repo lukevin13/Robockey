@@ -143,10 +143,10 @@ void print_mWii_data(unsigned int* data) {
 	m_usb_tx_string("\r\n");
 }
 
-// // mrf interrupt
-// ISR(INT2_vect) {
-// 	rf_flag = 1;
-// }
+// mrf interrupt
+ISR(INT2_vect) {
+	rf_flag = 1;
+}
 
 int command_check(char* buffer, char command) {
 	int i;
