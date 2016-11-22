@@ -143,13 +143,12 @@ int localize_me(double* th, double* r_pos, int* x, int* y, int numStars) {
 	// printf("r: %f, %f\r\n", r_x, r_y);
 
 	// Find scale
-	double scale = 14.5/pdist(northStar, southStar)/2;
-	scale = 1;
+	double scale = 29/pdist(northStar, southStar);
 	// printf("s: %f\r\n", scale);
 
 	// Apply scale
 	r_x *= scale;
-	r_y *= scale; //*(768.0/1024);
+	r_y *= scale;
 
 	// Return position in the rink
 	r_pos[0] = r_x;
