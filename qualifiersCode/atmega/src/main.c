@@ -231,3 +231,7 @@ void timer_setup() {
 	// 2 Hz
 	OCR3A = 7813;
 }
+
+void target(double* pos, double* th, double* tar_pos){
+	
+}
