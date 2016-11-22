@@ -24,7 +24,7 @@ volatile int score_red = 0;
 volatile int score_blue = 0;
 
 void init();
-void print_location(double* position);
+void print_location(double* position, double* theta);
 void print_mWii_data(unsigned int* data);
 void m_rf_process_state(char* buffer);
 void pwm_setup();
@@ -33,6 +33,7 @@ int main() {
 	init();
 	char mWii_read;
 	double r_pos[2] = {0.0, 0.0};
+	double r_theta[1] = {0.0};
 	unsigned int mWii_buffer[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	char m_rf_buffer[PACKET_LENGTH];
 
@@ -53,22 +54,22 @@ int main() {
 				mWii_buffer[9]-512
 			};
 			int y[4] = {
-				mWii_buffer[1]-512, 
-				mWii_buffer[4]-512, 
-				mWii_buffer[7]-512, 
-				mWii_buffer[10]-512
+				mWii_buffer[1] + -512, 
+				mWii_buffer[4] + -512, 
+				mWii_buffer[7] + -512, 
+				mWii_buffer[10] + -512
 			};
 			int numStars = countNumStars(x, y);
 			if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
 			
-			if (localize_me(r_pos,x,y,numStars)) {
+			if (localize_me(r_theta, r_pos,x,y,numStars)) {
 
 			} else {
 
 			}
 		}
 
-		if (SERIAL_DEBUG) print_location(r_pos);
+		if (SERIAL_DEBUG) print_location(r_pos, r_theta);
 	}
 
 	return 1;
@@ -98,11 +99,13 @@ void init() {
 	m_red(OFF);
 }
 
-void print_location(double* position) {
+void print_location(double* position, double* theta) {
 	m_usb_tx_string("Position: (");
 	m_usb_tx_int((int)position[0]);
 	m_usb_tx_string(", ");
 	m_usb_tx_int((int)position[1]);
+	m_usb_tx_string(", ");
+	m_usb_tx_int((int)theta[0]);
 	m_usb_tx_string(")\r\n");
 }
 
