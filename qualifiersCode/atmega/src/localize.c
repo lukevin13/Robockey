@@ -149,7 +149,7 @@ int localize_me(double* th, double* r_pos, int* x, int* y, int numStars) {
 
 	// Apply scale
 	r_x *= scale;
-	r_y *= scale*(768.0/1024);
+	r_y *= scale; //*(768.0/1024);
 
 	// Return position in the rink
 	r_pos[0] = r_x;

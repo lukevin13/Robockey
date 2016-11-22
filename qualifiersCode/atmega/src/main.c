@@ -18,7 +18,7 @@
 #define COM_GAMEOVER	0xA7
 
 // Volatiles
-volatile int state = 0;	// Robot state. 0: idle, 1:playing
+volatile int state = 0;	// Robot state. 0: idle, 1:playing, 2:comtest
 volatile int rf_flag = 0;
 volatile int score_red = 0;
 volatile int score_blue = 0;
@@ -28,6 +28,7 @@ void print_location(double* position, double* theta);
 void print_mWii_data(unsigned int* data);
 void m_rf_process_state(char* buffer);
 void pwm_setup();
+void timer_setup();
 
 int main() {
 	init();
@@ -72,6 +73,25 @@ int main() {
 		}
 
 		if (SERIAL_DEBUG) print_location(r_pos, r_theta);
+
+		// State logic
+		switch (state) {
+			case (0): 
+				// Idle
+				break;
+			case(1):
+				// Play
+				break;
+			case(2):
+				// ComTest
+				if (TIFR3, TOV3) {
+					set(TIFR3, TOV3);
+					m_green(TOGGLE);
+				}
+				break;
+			default:
+				break;
+		}
 	}
 
 	return 1;
@@ -138,8 +158,11 @@ int command_check(char* buffer, char command) {
 // Process mrf packets and change robot state
 void m_rf_process_state(char* buffer) {
 	// Gameplay state checks
-	if (command_check(buffer, COM_COMTEST)) state = 0;
-	else if (command_check(buffer, COM_PLAY)) state = 1;
+	if (command_check(buffer, COM_COMTEST)) state = 2;
+	else if (command_check(buffer, COM_PLAY)) {
+		state = 1;
+		m_green(ON);
+	}
 	else if (command_check(buffer, COM_HALFTIME)) state = 0;
 	else if (command_check(buffer, COM_GAMEOVER)) state = 0;
 	else if (command_check(buffer, COM_PAUSE)) state = 0;
@@ -179,4 +202,17 @@ void pwm_setup() {
 
 	// Start timer
 	set(TCCR1B, CS10);
+}
+
+void timer_setup() {
+	// Clock source /1024
+	set(TCCR3B, CS32);
+	clear(TCCR3B, CS31);
+	set(TCCR3B, CS30);
+
+	// mode 4
+	set(TCCR3B, WGM32);
+
+	// 2 Hz
+	OCR3A = 7813;
 }
