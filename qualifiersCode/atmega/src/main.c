@@ -58,10 +58,10 @@ int main() {
 
 			// Pin hole camera flips the y axis
 			int y[4] = {
-				-mWii_buffer[1]+512, 
-				-mWii_buffer[4]+512, 
-				-mWii_buffer[7]+512, 
-				-mWii_buffer[10]+512
+				-mWii_buffer[1]+384, 
+				-mWii_buffer[4]+384, 
+				-mWii_buffer[7]+384, 
+				-mWii_buffer[10]+384
 			};
 			int numStars = countNumStars(x, y);
 			if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
