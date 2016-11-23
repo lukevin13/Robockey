@@ -30,6 +30,7 @@ void m_rf_process_state(char* buffer);
 void pwm_setup();
 void timer_setup();
 void turn_off_wheels();
+void drive_wheels();
 void left_drive(int value);
 void right_drive(int value);
 
