@@ -30,14 +30,21 @@ void m_rf_process_state(char* buffer);
 void pwm_setup();
 void timer_setup();
 void turn_off_wheels();
+void left_drive(int value);
+void right_drive(int value);
 
 int main() {
 	init();
 	char mWii_read;
-	double r_pos[2] = {0.0, 0.0};
-	double r_theta[1] = {0.0};
+	double r_pos[2] = {0.0, 0.0};	// current position
+	double r_theta[1] = {0.0};		// current heading
+
+	double t_pos[2] = {0.0, 0.0};	// target position
+	double t_theta[1] = {0.0}		// target heading
+
 	unsigned int mWii_buffer[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	char m_rf_buffer[PACKET_LENGTH];
+	int init_flag = 1; // sides
 
 	while (1) {
 		if (rf_flag) {
@@ -68,6 +75,17 @@ int main() {
 			
 			if (localize_me(r_theta, r_pos,x,y,numStars)) {
 
+				// Determine target
+				if (!init_flag) {
+					init_flag = 1;
+					if (r_pos[0] < 0) {
+						t_pos[0] = 105;
+					}
+					else {
+						t_pos[0] = -105;
+					}
+				}
+
 			} else {
 
 			}
@@ -82,6 +100,7 @@ int main() {
 				break;
 			case(1):
 				// Play
+				init_flag = 0;
 				break;
 			case(2):
 				// ComTest
@@ -232,6 +251,16 @@ void timer_setup() {
 	OCR3A = 7813;
 }
 
-void target(double* pos, double* th, double* tar_pos){
-	
+// Left motor. direction B0, pwm OCR1B
+void left_drive(int value) {
+	if (value < 0) clear(PORTB, 0);
+	else set(PORTB, 0);
+	if (abs(value) < 2) OCR1B = 0;
+}
+
+// Right motor. direction B1, pwm OCR1C
+void right_drive(int value) {
+	if (value < 0) clear(PORTB, 1);
+	else set(PORTB, 0);
+	if (abs(value) < 2) OCR1C = 0;
 }
