@@ -23,6 +23,8 @@ volatile int rf_flag = 0;
 volatile int score_red = 0;
 volatile int score_blue = 0;
 
+
+
 void init();
 void print_location(double* position, double* theta);
 void print_mWii_data(unsigned int* data);
@@ -30,22 +32,19 @@ void m_rf_process_state(char* buffer);
 void pwm_setup();
 void timer_setup();
 void turn_off_wheels();
-void drive_wheels();
+void drive_wheels(double* r_pos, double* r_theta, double* t_pos);
 void left_drive(int value);
 void right_drive(int value);
 
 int main() {
 	init();
 	char mWii_read;
-	double r_pos[2] = {0.0, 0.0};	// current position
-	double r_theta[1] = {0.0};		// current heading
-
-	double t_pos[2] = {0.0, 0.0};	// target position
-	double t_theta[1] = {0.0}		// target heading
-
 	unsigned int mWii_buffer[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	char m_rf_buffer[PACKET_LENGTH];
 	int init_flag = 1; // sides
+	double r_pos[2] = {0.0, 0.0};	// current position
+	double r_theta[1] = {0.0};		// current heading
+	double t_pos[2] = {0.0, 0.0};	// target position
 
 	while (1) {
 		if (rf_flag) {
@@ -102,6 +101,7 @@ int main() {
 			case(1):
 				// Play
 				init_flag = 0;
+				if (init_flag) drive_wheels(r_pos, r_theta, t_pos);
 				break;
 			case(2):
 				// ComTest
@@ -257,6 +257,10 @@ void left_drive(int value) {
 	if (value < 0) clear(PORTB, 0);
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1B = 0;
+	else {
+		double dt = 1600.0*(value/100.0);
+		OCR1B = dt;
+	}
 }
 
 // Right motor. direction B1, pwm OCR1C
@@ -264,4 +268,36 @@ void right_drive(int value) {
 	if (value < 0) clear(PORTB, 1);
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1C = 0;
+	else {
+		double dt = 1600.0*(value/100.0);
+		OCR1C = dt;
+	}
+}
+
+// Sends values to both wheels
+void drive_wheels(double* r_pos, double* r_theta, double* t_pos) {
+	double vector[2] = {t_pos[0]-r_pos[0],t_pos[1]-r_pos[1]};
+	double t_theta = atan2(vector[1],vector[0])*180.0/3.14 - r_theta[0];
+	int l_value = 0;
+	int r_value = 0;
+	if (abs(t_theta) < 5) {
+		l_value += 70;
+		r_value += 70;
+	} else {
+		l_value = 0;
+		r_value = 0;
+	}
+	if (t_theta < -2) {
+		l_value += 10;
+		r_value -= 10;
+	} else if (t_theta > 2) {
+		l_value -= 10;
+		r_value += 10;
+	}
+	if (vector[0]*vector[0] + vector[1]*vector[1] < 1) {
+		l_value = 0;
+		r_value = 0;
+	}
+	left_drive(l_value);
+	right_drive(r_value);
 }
