@@ -6,7 +6,7 @@
 #include "localize.h"
 
 // Constants
-#define SERIAL_DEBUG	1
+#define SERIAL_DEBUG	0
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
@@ -18,15 +18,18 @@
 #define COM_GAMEOVER	0xA7
 
 // Volatiles
-volatile int state = 0;	// Robot state. 0: idle, 1:playing, 2:comtest
+volatile int state = 1;	// Robot state. 0: idle, 1:playing, 2:comtest
 volatile int rf_flag = 0;
 volatile int score_red = 0;
 volatile int score_blue = 0;
+volatile double t_theta = 0;
+volatile int lost_flag = 0;
 
 
 
 void init();
 void print_location(double* position, double* theta);
+void print_t_location(double* position, double theta);
 void print_mWii_data(unsigned int* data);
 void m_rf_process_state(char* buffer);
 void pwm_setup();
@@ -41,7 +44,7 @@ int main() {
 	char mWii_read;
 	unsigned int mWii_buffer[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	char m_rf_buffer[PACKET_LENGTH];
-	int init_flag = 1; // sides
+	int init_flag = 0; // sides
 	double r_pos[2] = {0.0, 0.0};	// current position
 	double r_theta[1] = {0.0};		// current heading
 	double t_pos[2] = {0.0, 0.0};	// target position
@@ -71,27 +74,35 @@ int main() {
 				-mWii_buffer[10]+384
 			};
 			int numStars = countNumStars(x, y);
-			if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
+			//if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
 			
 			if (localize_me(r_theta, r_pos,x,y,numStars)) {
-
+				lost_flag = 0;
 				// Determine target
 				if (!init_flag) {
 					init_flag = 1;
-					if (r_pos[0] < 0) {
-						t_pos[0] = 105;
-					}
-					else {
-						t_pos[0] = -105;
-					}
+					// if (r_pos[0] < 0) {
+					// 	t_pos[0] = -105;
+					// 	m_green(ON);
+					// }
+					// else {
+					// 	t_pos[0] = 105;
+					// 	m_red(ON);
+					// }
+					t_pos[0] = 105;
 				}
 
 			} else {
-
+				lost_flag = 1;
+				OCR1B = 0;
+				OCR1C = 0;
 			}
 		}
 
-		if (SERIAL_DEBUG) print_location(r_pos, r_theta);
+		if (SERIAL_DEBUG) {
+			print_location(r_pos, r_theta);
+			print_t_location(t_pos, t_theta);
+		}
 
 		// State logic
 		switch (state) {
@@ -100,8 +111,7 @@ int main() {
 				break;
 			case(1):
 				// Play
-				init_flag = 0;
-				if (init_flag) drive_wheels(r_pos, r_theta, t_pos);
+				if (init_flag && !lost_flag) drive_wheels(r_pos, r_theta, t_pos);
 				break;
 			case(2):
 				// ComTest
@@ -114,6 +124,8 @@ int main() {
 				break;
 		}
 	}
+
+
 
 	return 1;
 }
@@ -149,6 +161,16 @@ void print_location(double* position, double* theta) {
 	m_usb_tx_int((int)position[1]);
 	m_usb_tx_string(", ");
 	m_usb_tx_int((int)theta[0]);
+	m_usb_tx_string(")\t");
+}
+
+void print_t_location(double* position, double theta) {
+	m_usb_tx_string("Position: (");
+	m_usb_tx_int((int)position[0]);
+	m_usb_tx_string(", ");
+	m_usb_tx_int((int)position[1]);
+	m_usb_tx_string(", ");
+	m_usb_tx_int((int)theta);
 	m_usb_tx_string(")\r\n");
 }
 
@@ -258,8 +280,8 @@ void left_drive(int value) {
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1B = 0;
 	else {
-		double dt = 1600.0*(value/100.0);
-		OCR1B = dt;
+		double dt = 1600.0*(abs(value)/100.0);
+		OCR1B = (int)dt;
 	}
 }
 
@@ -269,31 +291,40 @@ void right_drive(int value) {
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1C = 0;
 	else {
-		double dt = 1600.0*(value/100.0);
-		OCR1C = dt;
+		double dt = 1600.0*(abs(value)/100.0);
+		OCR1C = (int)dt;
 	}
 }
 
 // Sends values to both wheels
 void drive_wheels(double* r_pos, double* r_theta, double* t_pos) {
 	double vector[2] = {t_pos[0]-r_pos[0],t_pos[1]-r_pos[1]};
-	double t_theta = atan2(vector[1],vector[0])*180.0/3.14 - r_theta[0];
+	t_theta = atan2(1,0) - atan2(vector[1],vector[0]);
+	t_theta = (-t_theta*180.0/3.14-r_theta[0]);
+	if (t_theta >= 180) t_theta -= 360;
+	if (t_theta <= -180) t_theta += 360;
 	int l_value = 0;
 	int r_value = 0;
-	if (abs(t_theta) < 5) {
-		l_value += 70;
-		r_value += 70;
-	} else {
-		l_value = 0;
-		r_value = 0;
-	}
-	if (t_theta < -2) {
-		l_value += 10;
-		r_value -= 10;
-	} else if (t_theta > 2) {
-		l_value -= 10;
-		r_value += 10;
-	}
+	// if (abs(t_theta) < 5) {
+	// 	l_value += 85;
+	// 	r_value += 85;
+	// 	if (t_theta < 0) {
+	// 		l_value += 10;
+	// 		r_value -= 10;
+	// 	} else {
+	// 		l_value -= 10;
+	// 		r_value += 10;
+	// 	}
+	// } else {
+		if (t_theta < -5) {
+			l_value += 70;
+			r_value -= 70;
+		} else if (t_theta > 5) {
+			l_value -= 70;
+			r_value += 70;
+		}
+	// }
+	
 	if (vector[0]*vector[0] + vector[1]*vector[1] < 1) {
 		l_value = 0;
 		r_value = 0;
