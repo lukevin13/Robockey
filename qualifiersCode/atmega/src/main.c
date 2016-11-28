@@ -25,8 +25,6 @@ volatile int score_blue = 0;
 volatile double t_theta = 0;
 volatile int lost_flag = 0;
 
-
-
 void init();
 void print_location(double* position, double* theta);
 void print_t_location(double* position, double theta);
