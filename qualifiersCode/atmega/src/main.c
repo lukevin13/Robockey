@@ -73,21 +73,20 @@ int main() {
 			};
 			int numStars = countNumStars(x, y);
 			//if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
-			
+
 			if (localize_me(r_theta, r_pos,x,y,numStars)) {
 				lost_flag = 0;
 				// Determine target
 				if (!init_flag) {
 					init_flag = 1;
-					// if (r_pos[0] < 0) {
-					// 	t_pos[0] = -105;
-					// 	m_green(ON);
-					// }
-					// else {
-					// 	t_pos[0] = 105;
-					// 	m_red(ON);
-					// }
-					t_pos[0] = 105;
+					if (r_pos[0] < 0) {
+						t_pos[0] = -105;
+						m_green(ON);
+					}
+					else {
+						t_pos[0] = 105;
+						m_red(ON);
+					}
 				}
 
 			} else {
@@ -273,7 +272,7 @@ void timer_setup() {
 }
 
 // Left motor. direction B0, pwm OCR1B
-void left_drive(int value) {
+void right_drive(int value) {
 	if (value < 0) clear(PORTB, 0);
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1B = 0;
@@ -284,9 +283,9 @@ void left_drive(int value) {
 }
 
 // Right motor. direction B1, pwm OCR1C
-void right_drive(int value) {
-	if (value < 0) clear(PORTB, 1);
-	else set(PORTB, 0);
+void left_drive(int value) {
+	if (value > 0) clear(PORTB, 1);
+	else set(PORTB, 1);
 	if (abs(value) < 2) OCR1C = 0;
 	else {
 		double dt = 1600.0*(abs(value)/100.0);
@@ -303,17 +302,17 @@ void drive_wheels(double* r_pos, double* r_theta, double* t_pos) {
 	if (t_theta <= -180) t_theta += 360;
 	int l_value = 0;
 	int r_value = 0;
-	// if (abs(t_theta) < 5) {
-	// 	l_value += 85;
-	// 	r_value += 85;
-	// 	if (t_theta < 0) {
-	// 		l_value += 10;
-	// 		r_value -= 10;
-	// 	} else {
-	// 		l_value -= 10;
-	// 		r_value += 10;
-	// 	}
-	// } else {
+	if (abs(t_theta) < 5) {
+		l_value += 85;
+		r_value += 85;
+		if (t_theta < 0) {
+			l_value += 10;
+			r_value -= 10;
+		} else {
+			l_value -= 10;
+			r_value += 10;
+		}
+	} else {
 		if (t_theta < -5) {
 			l_value += 70;
 			r_value -= 70;
@@ -321,7 +320,7 @@ void drive_wheels(double* r_pos, double* r_theta, double* t_pos) {
 			l_value -= 70;
 			r_value += 70;
 		}
-	// }
+	}
 	
 	if (vector[0]*vector[0] + vector[1]*vector[1] < 1) {
 		l_value = 0;
