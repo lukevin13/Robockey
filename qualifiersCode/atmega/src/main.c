@@ -18,7 +18,7 @@
 #define COM_GAMEOVER	0xA7
 
 // Volatiles
-volatile int state = 0;	// Robot state. 0: idle, 1:playing, 2:comtest
+volatile int state = 1;	// Robot state. 0: idle, 1:playing, 2:comtest
 volatile int rf_flag = 0;
 volatile int score_red = 0;
 volatile int score_blue = 0;
@@ -47,6 +47,7 @@ int main() {
 	double r_theta[1] = {0.0};		// current heading
 	double t_pos[2] = {0.0, 0.0};	// target position
 
+	m_wait(5000);
 	while (1) {
 		if (rf_flag) {
 			rf_flag = 0;
@@ -79,7 +80,7 @@ int main() {
 				// Determine target
 				if (!init_flag) {
 					init_flag = 1;
-					if (r_pos[0] < 0) {
+					if (r_pos[0] > 0) {
 						t_pos[0] = -105;
 						m_green(ON);
 					}
