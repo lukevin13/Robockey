@@ -18,7 +18,7 @@
 #define COM_GAMEOVER	0xA7
 
 // Volatiles
-volatile int state = 1;	// Robot state. 0: idle, 1:playing, 2:comtest
+volatile int state = 0;	// Robot state. 0: idle, 1:playing, 2:comtest
 volatile int rf_flag = 0;
 volatile int score_red = 0;
 volatile int score_blue = 0;
@@ -56,7 +56,7 @@ int main() {
 
 		// Read from mWii and process data
 		mWii_read = m_wii_read(mWii_buffer);
-		if (mWii_read) {
+		if (mWii_read && state==1) {
 			int x[4] = {
 				mWii_buffer[0]-512, 
 				mWii_buffer[3]-512, 
@@ -322,9 +322,10 @@ void drive_wheels(double* r_pos, double* r_theta, double* t_pos) {
 		}
 	}
 	
-	if (vector[0]*vector[0] + vector[1]*vector[1] < 1) {
+	if (vector[0]*vector[0] + vector[1]*vector[1] < 2) {
 		l_value = 0;
 		r_value = 0;
+		state = 2;
 	}
 	left_drive(l_value);
 	right_drive(r_value);
