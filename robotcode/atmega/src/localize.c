@@ -50,7 +50,7 @@ int countNumStars(int* x, int* y) {
 	int i;
 	int numStars = 0;
 	for (i=0;i<4;i++) {
-		if (x[i] == 511 && y[i] == 511) numStars++;
+		if (x[i] == 511 && y[i] == -639) numStars++;
 	}
 	return 4-numStars;
 }

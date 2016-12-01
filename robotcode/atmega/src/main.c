@@ -72,8 +72,7 @@ int main() {
 				-mWii_buffer[7]+384, 
 				-mWii_buffer[10]+384
 			};
-			int numStars = countNumStars(x, y);
-			//if (SERIAL_DEBUG) print_mWii_data(mWii_buffer);
+			 intnumStars = countNumStars(x, y);
 
 			if (localize_me(r_theta, r_pos,x,y,numStars)) {
 				lost_flag = 0;
@@ -252,11 +251,6 @@ void pwm_setup() {
 
 	// Start timer
 	set(TCCR1B, CS10);
-}
-
-void turn_off_wheels() {
-	OCR1B = 0;
-	OCR1C = 0;
 }
 
 void timer_setup() {
