@@ -4,9 +4,10 @@
 #include "m_usb.h"
 #include "m_wii.h"
 #include "localize.h"
+#include <math.h>
 
 // Constants
-#define DEBUG			0		// Serial debug
+#define SERIAL_DEBUG	0		// Serial debug
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
@@ -17,30 +18,44 @@
 #define	COM_HALFTIME	0xA6
 #define COM_GAMEOVER	0xA7
 
+#define RAD2DEG 		180/3.14
+
 // Volatiles
+volatile int redTeam = 0;		// 0: Blue Team, 1: Red Team
+volatile int scoreRed = 0;
+volatile int scoreBlue = 0;
+
 volatile int state = 0;
 volatile int rf_flag = 0;
 volatile int lost_flag = 0;
 
-volatile int mrf_buffer[PACKET_LENGTH];
-volatile int mWii_buffer[12];
+char mrf_buffer[PACKET_LENGTH];
+unsigned int mWii_buffer[12];
 
-volatile double robot_pos[2];
-volatile double robot_theta[1];
-volatile double goal_pos[2];
-volatile double goal_theta[1];
-volatile double goal_dist;
+double robot_pos[2];
+double robot_theta[1];
+double goal_pos[2];
+double goal_theta[1];
+double target_pos[2];
+double target_theta[1];
+double goal_dist;
+double target_dist;
 
-// Function declarations
+// Function Declarations
 void init();
+void setupGPIO();
 void setupPWM();
 void checkRF();
 void localize();
 void calculateAngleToGoal();
-void pollIRSensors();
+void findPuck();
 void calculateAngleToPuck();
 void chooseStrategy();
+void face();
 void drive();
+void left_drive();
+void right_drive();
+void turn_off_wheels();
 void update();
 void debug();
 
@@ -52,7 +67,7 @@ int main() {
 		checkRF();
 		localize();
 		calculateAngleToGoal();
-		pollIRSensors();
+		findPuck();
 		calculateAngleToPuck();
 		chooseStrategy();
 		drive();
@@ -63,7 +78,7 @@ int main() {
 	return 1;
 }
 
-// Functions
+// Initialization Function
 void init() {
 	m_clockdivide(0);
 	m_red(ON);
@@ -71,6 +86,7 @@ void init() {
 	sei();
 	m_bus_init();
 	m_usb_init();
+	setupGPIO();
 	setupPWM();
 
 	while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
@@ -85,14 +101,20 @@ ISR(INT2_vect) {
 	rf_flag = 1;
 }
 
-// Set up pwms
-void setupPWM() {
+// Set up IO Pins
+void setupGPIO() {
 	// Set up motor direction ports
 	set(DDRB, 0);
 	set(DDRB, 1);
 	clear(PORTB, 0);
 	clear(PORTB, 1);
 
+	// Set up LED ports
+
+}
+
+// Set up pwms
+void setupPWM() {
 	// Set up pwm
 	set(DDRB, 5);
 	set(DDRB, 6);
@@ -124,6 +146,15 @@ void setupPWM() {
 
 	// Start timer
 	set(TCCR1B, CS10);
+}
+
+// Checks packets for game commands
+int command_check(char* buffer, char command) {
+	int i;
+	for (i=0;i<PACKET_LENGTH;i++) {
+		if (buffer[i] != command) return 0;
+	}
+	return 1;
 }
 
 // Process rf packets
@@ -187,39 +218,89 @@ void localize() {
 	}
 }
 
+// Calculate theta to goal
 void calculateAngleToGoal() {
 	double vector[2] = {goal_pos[0]-robot_pos[0],goal_pos[1]-robot_pos[1]};
-	goal_dist = vector[0]*vector[0] + vector[1]*vector[1];
+	goal_dist = sqrt(vector[0]*vector[0] + vector[1]*vector[1]);
 	goal_theta[0] = atan2(1,0) - atan2(vector[1],vector[0]);
 }
 
+// Find the puck
+void findPuck() {
+
+}
+
+// Drive motors to target location
 void drive() {
-	double_theta = (-goal_theta[0]-robot_theta[0]);
-	if (goal_theta[0] >= 180) goal_theta[0] -= 360;
-	if (goal_theta[0] <= -180) goal_theta[0] += 360;
+	double theta = (-target_theta[0]-robot_theta[0])*RAD2DEG;
+	if (theta >= 180) theta -= 360;
+	if (theta <= -180) theta += 360;
 
 	int l_value = 0;
 	int r_value = 0;
-	if (abs(goal_theta[0]) < 5) {
-		l_value += 85;
-		r_value += 85;
-		if (goal_theta[0] < 0) {
-			l_value += 10;
-			r_value -= 10;
-		} else {
-			l_value -= 10;
-			r_value += 10;
+	if (abs(theta) < 5) {
+		if (target_dist > 1) {
+			l_value += 85;
+			r_value += 85;
+			if (theta < 0) {
+				l_value += 10;
+				r_value -= 10;
+			} else {
+				l_value -= 10;
+				r_value += 10;
+			}
 		}
+		left_drive(l_value);
+		right_drive(r_value);
 	} else {
-		if (goal_theta[0] < -5) {
-			l_value += 70;
-			r_value -= 70;
-		} else if (goal_theta[0] > 5) {
-			l_value -= 70;
-			r_value += 70;
-		}
+		face();
 	}
-	
-	left_drive(l_value);
-	right_drive(r_value);
+}
+
+// Face a direction
+void face() {
+	double theta = (-target_theta[0]-robot_theta[0])*RAD2DEG;
+	if (theta >= 180) theta -= 360;
+	if (theta <= -180) theta += 360;
+
+	if (theta < -5) {
+		left_drive(80);
+		right_drive(-80);
+	} else if (theta > 5) {
+		left_drive(-80);
+		right_drive(80);
+	}
+}
+
+// Left motor. direction B0, pwm OCR1B
+void right_drive(int value) {
+	if (value < 0) clear(PORTB, 0);
+	else set(PORTB, 0);
+	if (abs(value) < 2) OCR1B = 0;
+	else {
+		double dt = 1600.0*(abs(value)/100.0);
+		OCR1B = (int)dt;
+	}
+}
+
+// Right motor. direction B1, pwm OCR1C
+void left_drive(int value) {
+	if (value > 0) clear(PORTB, 1);
+	else set(PORTB, 1);
+	if (abs(value) < 2) OCR1C = 0;
+	else {
+		double dt = 1600.0*(abs(value)/100.0);
+		OCR1C = (int)dt;
+	}
+}
+
+// Stops both wheels
+void turn_off_wheels() {
+	OCR1B = 0;
+	OCR1C = 0;
+}
+
+// Update variables
+void update() {
+	target_dist = pdist(target_pos, robot_pos);
 }
