@@ -34,6 +34,7 @@ volatile int state = 0;
 volatile int rf_flag = 0;
 volatile int rf_debug_flag = 0;
 volatile int lost_flag = 0;
+volatile int led_on_flag = 0;
 
 char mrf_buffer[PACKET_LENGTH];
 unsigned int mWii_buffer[12];
@@ -51,6 +52,7 @@ double target_dist;
 void init();
 void setupGPIO();
 void setupPWM();
+void setupTimer();
 void checkRF();
 void localize();
 void calculateAngleToGoal();
@@ -63,6 +65,9 @@ void right_drive();
 void turn_off_wheels();
 void update();
 void debug();
+void ledOn();
+void ledOff();
+void ledToggle();
 
 // Main
 int main() {
@@ -92,6 +97,7 @@ void init() {
 	m_usb_init();
 	setupGPIO();
 	setupPWM();
+	setupTimer();
 
 	while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
 	while (!m_usb_isconnected() & SERIAL_DEBUG);
@@ -114,7 +120,10 @@ void setupGPIO() {
 	clear(PORTB, 1);
 
 	// Set up LED ports
-
+	set(DDRB, 2);		// Red LED
+	set(DDRB, 3);		// Blue LED
+	clear(PORTB, 2);
+	clear(PORTB, 3);
 }
 
 // Set up pwms
@@ -148,8 +157,22 @@ void setupPWM() {
 	OCR1B = 0;
 	OCR1C = 0;
 
-	// Start timer
+	// Start pwm
 	set(TCCR1B, CS10);
+}
+
+// Set up timers
+void setupTimer() {
+	// Clock source /1024
+	set(TCCR3B, CS32);
+	clear(TCCR3B, CS31);
+	set(TCCR3B, CS30);
+
+	// mode 4
+	set(TCCR3B, WGM32);
+
+	// 2 Hz
+	OCR3A = 7813;
 }
 
 // Checks packets for game commands
@@ -169,10 +192,12 @@ void checkRF() {
 		rf_debug_flag = 1;
 		m_rf_read(mrf_buffer, PACKET_LENGTH);
 
-		if (command_check(mrf_buffer, COM_COMTEST)) state = 2;
+		if (command_check(mrf_buffer, COM_COMTEST)) {
+			state = 2;
+		}
 		else if (command_check(mrf_buffer, COM_PLAY)) {
 			state = 1;
-			m_green(ON);
+			ledOn();
 		}
 		else if (command_check(mrf_buffer, COM_HALFTIME)) {
 			state = 0;
@@ -360,6 +385,7 @@ void debug() {
 
 	if (DEBUG_MRF && rf_debug_flag) {
 		// Print mWii buffer
+		rf_debug_flag = 0;
 		m_usb_tx_string("mRF: [");
 		int i;
 		for (i=0;i<PACKET_LENGTH;i++) {
@@ -369,4 +395,21 @@ void debug() {
 		m_usb_tx_hexchar(mrf_buffer[PACKET_LENGTH-1]);
 		m_usb_tx_string("]\n");
 	}
+}
+
+void ledOn() {
+	if (redTeam) set(PORTB, 2);
+	else set(PORTB, 3);
+	led_on_flag = 1;
+}
+
+void ledOff() {
+	clear(PORTB, 2);
+	clear(PORTB, 3);
+	led_on_flag = 0;
+}
+
+void ledToggle() {
+	if (led_on_flag) ledOff();
+	else ledOn();
 }
