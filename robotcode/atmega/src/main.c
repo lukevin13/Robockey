@@ -248,8 +248,8 @@ void drive() {
 
 	int l_value = 0;
 	int r_value = 0;
-	if (abs(theta) < 5) {
-		if (target_dist > 1) {
+	if (target_dist > 1) {
+		if (abs(theta) < 5) {
 			l_value += 85;
 			r_value += 85;
 			if (theta < 0) {
@@ -259,11 +259,11 @@ void drive() {
 				l_value -= 10;
 				r_value += 10;
 			}
-		}
 		left_drive(l_value);
 		right_drive(r_value);
-	} else {
-		face();
+		} else {
+			face();
+		}
 	}
 }
 
