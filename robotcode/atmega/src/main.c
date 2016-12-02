@@ -8,6 +8,11 @@
 
 // Constants
 #define SERIAL_DEBUG	0		// Serial debug
+#define DEBUG_ROBOT		1
+#define DEBUG_TARGET	1
+#define DEBUG_MWII		1
+#define DEBUG_MRF		1
+
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
@@ -27,6 +32,7 @@ volatile int scoreBlue = 0;
 
 volatile int state = 0;
 volatile int rf_flag = 0;
+volatile int rf_debug_flag = 0;
 volatile int lost_flag = 0;
 
 char mrf_buffer[PACKET_LENGTH];
@@ -49,7 +55,6 @@ void checkRF();
 void localize();
 void calculateAngleToGoal();
 void findPuck();
-void calculateAngleToPuck();
 void chooseStrategy();
 void face();
 void drive();
@@ -68,7 +73,6 @@ int main() {
 		localize();
 		calculateAngleToGoal();
 		findPuck();
-		calculateAngleToPuck();
 		chooseStrategy();
 		drive();
 		update();
@@ -162,6 +166,7 @@ void checkRF() {
 	// Gameplay state checks
 	if (rf_flag) {
 		rf_flag = 0;
+		rf_debug_flag = 1;
 		m_rf_read(mrf_buffer, PACKET_LENGTH);
 
 		if (command_check(mrf_buffer, COM_COMTEST)) state = 2;
@@ -218,7 +223,7 @@ void localize() {
 	}
 }
 
-// Calculate theta to goal
+// Calculate angle to goal
 void calculateAngleToGoal() {
 	double vector[2] = {goal_pos[0]-robot_pos[0],goal_pos[1]-robot_pos[1]};
 	goal_dist = sqrt(vector[0]*vector[0] + vector[1]*vector[1]);
@@ -228,6 +233,11 @@ void calculateAngleToGoal() {
 // Find the puck
 void findPuck() {
 
+}
+
+// Choose Strategy
+void chooseStrategy() {
+	
 }
 
 // Drive motors to target location
@@ -303,4 +313,60 @@ void turn_off_wheels() {
 // Update variables
 void update() {
 	target_dist = pdist(target_pos, robot_pos);
+}
+
+// Debug
+void debug() {
+	if (!SERIAL_DEBUG) return;
+
+	if (DEBUG_ROBOT) {
+		// Print Robot state
+		m_usb_tx_string("State: ");
+		m_usb_tx_int(state);
+		m_usb_tx_string("\n");
+
+		// Print Robot (x,y,theta)
+		m_usb_tx_string("Robot: (");
+		m_usb_tx_int((int)robot_pos[0]);
+		m_usb_tx_string(", ");
+		m_usb_tx_int((int)robot_pos[1]);
+		m_usb_tx_string(", ");
+		m_usb_tx_int((int)robot_theta[0]);
+		m_usb_tx_string(")\n");
+	}
+
+	if (DEBUG_TARGET) {
+		// Print Target (x,y,theta)
+		m_usb_tx_string("Robot: (");
+		m_usb_tx_int((int)target_pos[0]);
+		m_usb_tx_string(", ");
+		m_usb_tx_int((int)target_pos[1]);
+		m_usb_tx_string(", ");
+		m_usb_tx_int((int)target_theta[0]);
+		m_usb_tx_string(")\n");
+	}
+
+	if (DEBUG_MWII) {
+		// Print mWii buffer
+		m_usb_tx_string("mWii: [");
+		int i;
+		for (i=0;i<11;i++) {
+			m_usb_tx_uint(mWii_buffer[i]);
+			m_usb_tx_string(", ");
+		}
+		m_usb_tx_uint(mWii_buffer[11]);
+		m_usb_tx_string("]\n");
+	}
+
+	if (DEBUG_MRF && rf_debug_flag) {
+		// Print mWii buffer
+		m_usb_tx_string("mRF: [");
+		int i;
+		for (i=0;i<PACKET_LENGTH;i++) {
+			m_usb_tx_hexchar(mrf_buffer[i]);
+			m_usb_tx_string(", ");
+		}
+		m_usb_tx_hexchar(mrf_buffer[PACKET_LENGTH-1]);
+		m_usb_tx_string("]\n");
+	}
 }
