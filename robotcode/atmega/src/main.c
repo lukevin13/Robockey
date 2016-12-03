@@ -7,30 +7,31 @@
 #include <math.h>
 
 // Constants
-#define SERIAL_DEBUG	0		// Serial debug
+#define SERIAL_DEBUG	1		// Serial debug
 #define DEBUG_ROBOT		1
-#define DEBUG_TARGET	1
-#define DEBUG_MWII		1
-#define DEBUG_MRF		1
+#define DEBUG_TARGET	0
+#define DEBUG_MWII		0
+#define DEBUG_MRF		0
 
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
 
-#define COM_COMTEST		0xA0
-#define COM_PLAY		0xA1
-#define COM_PAUSE		0xA4
-#define	COM_HALFTIME	0xA6
-#define COM_GAMEOVER	0xA7
+#define COM_COMTEST		((char) 0xA0)
+#define COM_PLAY		((char) 0xA1)
+#define COM_PAUSE		((char) 0xA4)
+#define COM_DETANGLE	((char) 0xA5)
+#define	COM_HALFTIME	((char) 0xA6)
+#define COM_GAMEOVER	((char) 0xA7)
 
 #define RAD2DEG 		180/3.14
 
 // Volatiles
-volatile int redTeam = 0;		// 0: Blue Team, 1: Red Team
+volatile int redTeam = 1;		// 0: Blue Team, 1: Red Team
 volatile int scoreRed = 0;
 volatile int scoreBlue = 0;
 
-volatile int state = 0;
+volatile int state = 1;
 volatile int rf_flag = 0;
 volatile int rf_debug_flag = 0;
 volatile int lost_flag = 0;
@@ -75,12 +76,15 @@ int main() {
 
 	while (1) {
 		checkRF();
-		localize();
-		calculateAngleToGoal();
-		findPuck();
-		chooseStrategy();
-		drive();
-		update();
+		
+		if (state == 1) {
+			localize();
+			calculateAngleToGoal();
+			findPuck();
+			chooseStrategy();
+			drive();
+			update();
+		}
 		debug();
 	}
 
@@ -192,28 +196,30 @@ void checkRF() {
 		rf_debug_flag = 1;
 		m_rf_read(mrf_buffer, PACKET_LENGTH);
 
-		if (command_check(mrf_buffer, COM_COMTEST)) {
-			state = 2;
-		}
-		else if (command_check(mrf_buffer, COM_PLAY)) {
+		int var = (int) mrf_buffer[0];
+		if (var == COM_COMTEST) state = 0;
+		else if (var == COM_PLAY) {
 			state = 1;
 			ledOn();
 		}
-		else if (command_check(mrf_buffer, COM_HALFTIME)) {
-			state = 0;
+		else if (var == COM_HALFTIME) {
+			state = 6;
 			turn_off_wheels();
 		}
-		else if (command_check(mrf_buffer, COM_GAMEOVER)) {
-			state = 0;
+		else if (var == COM_GAMEOVER) {
+			state = 4;
 			turn_off_wheels();
 		}
-		else if (command_check(mrf_buffer, COM_PAUSE)) {
-			state = 0;
+		else if (var == COM_PAUSE) {
+			state = 4;
+			turn_off_wheels();
+		}
+		else if (var == COM_DETANGLE) {
+			state = 5;
 			turn_off_wheels();
 		}
 
-		// Update scores
-		else if (mrf_buffer[0] == 0xA2 || mrf_buffer[0] == 0xA3) {
+		if (mrf_buffer[0] == 0xA2 || mrf_buffer[0] == 0xA3) {
 			scoreRed = mrf_buffer[1];
 			scoreBlue = mrf_buffer[2];
 		}
@@ -244,7 +250,11 @@ void localize() {
 		};
 
 		int n = countNumStars(x,y);
-		lost_flag = !localize_me(robot_theta,robot_pos,x,y,n);
+		if (n==4) {
+			localize_me(robot_theta,robot_pos,x,y,n);
+			lost_flag = 0;
+		}
+		else lost_flag = 1;
 	}
 }
 
@@ -345,11 +355,6 @@ void debug() {
 	if (!SERIAL_DEBUG) return;
 
 	if (DEBUG_ROBOT) {
-		// Print Robot state
-		m_usb_tx_string("State: ");
-		m_usb_tx_int(state);
-		m_usb_tx_string("\n");
-
 		// Print Robot (x,y,theta)
 		m_usb_tx_string("Robot: (");
 		m_usb_tx_int((int)robot_pos[0]);
@@ -388,12 +393,17 @@ void debug() {
 		rf_debug_flag = 0;
 		m_usb_tx_string("mRF: [");
 		int i;
-		for (i=0;i<PACKET_LENGTH;i++) {
+		for (i=0;i<PACKET_LENGTH-1;i++) {
 			m_usb_tx_hexchar(mrf_buffer[i]);
 			m_usb_tx_string(", ");
 		}
 		m_usb_tx_hexchar(mrf_buffer[PACKET_LENGTH-1]);
-		m_usb_tx_string("]\n");
+		m_usb_tx_string("]\t");
+
+		// Print Robot state
+		m_usb_tx_string("State: ");
+		m_usb_tx_int(state);
+		m_usb_tx_string("\n");
 	}
 }
 
