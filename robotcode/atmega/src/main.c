@@ -40,6 +40,9 @@ volatile int led_on_flag = 0;
 char mrf_buffer[PACKET_LENGTH];
 unsigned int mWii_buffer[12];
 
+int lf_pt;
+int cf_pt;
+int rf_pt;
 double robot_pos[2];
 double robot_theta[1];
 double goal_pos[2];
@@ -54,6 +57,7 @@ void init();
 void setupGPIO();
 void setupPWM();
 void setupTimer();
+void setupADC();
 void checkRF();
 void localize();
 void calculateAngleToGoal();
@@ -76,15 +80,18 @@ int main() {
 
 	while (1) {
 		checkRF();
+		left_drive(80);
+		right_drive(80);
 		
-		if (state == 1) {
-			localize();
-			calculateAngleToGoal();
-			findPuck();
-			chooseStrategy();
-			drive();
-			update();
-		}
+		// if (state == 1) {
+		// 	localize();
+		// 	calculateAngleToGoal();
+		// 	findPuck();
+		// 	chooseStrategy();
+		// 	drive();
+		// 	update();
+		// }
+
 		debug();
 	}
 
@@ -102,6 +109,7 @@ void init() {
 	setupGPIO();
 	setupPWM();
 	setupTimer();
+	setupADC();
 
 	while (!m_rf_open(CHANNEL, ADDRESS, PACKET_LENGTH));
 	while (!m_usb_isconnected() & SERIAL_DEBUG);
@@ -177,6 +185,33 @@ void setupTimer() {
 
 	// 2 Hz
 	OCR3A = 7813;
+}
+
+// Set up ADC
+void setupADC() {
+	// Access F4-F7
+	m_disableJTAG();
+
+	// Set voltage reference Vcc
+	clear(ADMUX, REFS1);
+	set(ADMUX, REFS0);
+
+	// Set ADC prescaler /64
+	set(ADCSRA, ADPS2);
+	set(ADCSRA, ADPS1);
+	clear(ADCSRA, ADPS0);
+
+	// Disable digital inputs
+	set(DIDR0, ADC0D);
+	set(DIDR0, ADC1D);
+	set(DIDR0, ADC4D);
+
+	// Disable free running mode
+	set(ADCSRA, ADATE);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
 }
 
 // Checks packets for game commands
@@ -267,7 +302,7 @@ void calculateAngleToGoal() {
 
 // Find the puck
 void findPuck() {
-
+	
 }
 
 // Choose Strategy
