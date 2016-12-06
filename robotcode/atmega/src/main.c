@@ -85,17 +85,15 @@ int main() {
 
 	while (1) {
 		checkRF();
-		left_drive(80);
-		right_drive(80);
 		
-		// if (state == 1) {
-		// 	localize();
-		// 	calculateAngleToGoal();
-		// 	findPuck();
-		// 	chooseStrategy();
-		// 	drive();
-		// 	update();
-		// }
+		if (state == 1) {
+			localize();
+			calculateAngleToGoal();
+			findPuck();
+			chooseStrategy();
+			drive();
+			update();
+		}
 
 		debug();
 	}
