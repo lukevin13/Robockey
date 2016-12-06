@@ -40,9 +40,7 @@ volatile int led_on_flag = 0;
 char mrf_buffer[PACKET_LENGTH];
 unsigned int mWii_buffer[12];
 
-int lf_pt;
-int cf_pt;
-int rf_pt;
+uint16_t adc_val[3];
 double robot_pos[2];
 double robot_theta[1];
 double goal_pos[2];
@@ -207,7 +205,7 @@ void setupADC() {
 	set(DIDR0, ADC4D);
 
 	// Disable free running mode
-	set(ADCSRA, ADATE);
+	clear(ADCSRA, ADATE);
 
 	// Enable ADC and start conversion
 	set(ADCSRA, ADEN);
