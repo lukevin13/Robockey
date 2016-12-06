@@ -7,11 +7,12 @@
 #include <math.h>
 
 // Constants
-#define SERIAL_DEBUG	1		// Serial debug
-#define DEBUG_ROBOT		1
+#define SERIAL_DEBUG	0		// Serial debug
+#define DEBUG_ROBOT		0
 #define DEBUG_TARGET	0
 #define DEBUG_MWII		0
 #define DEBUG_MRF		0
+#define DEBUG_ADC		0
 
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
@@ -523,6 +524,19 @@ void debug() {
 		m_usb_tx_int(state);
 		m_usb_tx_string("\n");
 	}
+
+	if (DEBUG_ADC) {
+		// Print ADC values
+		m_usb_tx_string("ADC: [");
+		int i;
+		for (i=0;i<NUM_ADC-1;i++) {
+			m_usb_tx_uint(adc_val[i]);
+			m_usb_tx_string(", ");
+		}
+		m_usb_tx_uint(adc_val[NUM_ADC-1]);
+		m_usb_tx_string("]\n");
+	}
+
 }
 
 void ledOn() {
