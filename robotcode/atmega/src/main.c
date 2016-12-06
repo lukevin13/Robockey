@@ -16,6 +16,8 @@
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
+#define NUM_ADC			3
+#define RAD2DEG 		180/3.14
 
 #define COM_COMTEST		((char) 0xA0)
 #define COM_PLAY		((char) 0xA1)
@@ -24,7 +26,6 @@
 #define	COM_HALFTIME	((char) 0xA6)
 #define COM_GAMEOVER	((char) 0xA7)
 
-#define RAD2DEG 		180/3.14
 
 // Volatiles
 volatile int redTeam = 1;		// 0: Blue Team, 1: Red Team
@@ -36,11 +37,12 @@ volatile int rf_flag = 0;
 volatile int rf_debug_flag = 0;
 volatile int lost_flag = 0;
 volatile int led_on_flag = 0;
+volatile int puck_unseen = 0;
 
 char mrf_buffer[PACKET_LENGTH];
 unsigned int mWii_buffer[12];
 
-uint16_t adc_val[3];
+uint16_t adc_val[NUM_ADC];
 double robot_pos[2];
 double robot_theta[1];
 double goal_pos[2];
@@ -49,6 +51,7 @@ double target_pos[2];
 double target_theta[1];
 double goal_dist;
 double target_dist;
+double puck_theta;
 
 // Function Declarations
 void init();
@@ -60,6 +63,9 @@ void checkRF();
 void localize();
 void calculateAngleToGoal();
 void findPuck();
+void adc0();
+void adc1();
+void adc4();
 void chooseStrategy();
 void face();
 void drive();
@@ -204,12 +210,8 @@ void setupADC() {
 	set(DIDR0, ADC1D);
 	set(DIDR0, ADC4D);
 
-	// Disable free running mode
-	clear(ADCSRA, ADATE);
-
-	// Enable ADC and start conversion
-	set(ADCSRA, ADEN);
-	set(ADCSRA, ADSC);
+	// Enable free running mode
+	set(ADCSRA, ADATE);
 }
 
 // Checks packets for game commands
@@ -298,9 +300,92 @@ void calculateAngleToGoal() {
 	goal_theta[0] = atan2(1,0) - atan2(vector[1],vector[0]);
 }
 
+// Read ADC ports
+void adc0() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F0
+	clear(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[0] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc1() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F0
+	clear(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	set(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[1] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc4() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F0
+	clear(ADCSRB, MUX5);
+	set(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[2] = ADC;
+	set(ADCSRA, ADIF);
+}
+
 // Find the puck
 void findPuck() {
-	
+	// Read ADC
+	adc0();
+	adc1();
+	adc4();
+
+	// Determine max
+	int max_index = -1;
+	int max_val = 0;
+	int i;
+	for (i=0;i<NUM_ADC;i++) {
+		if (adc_val[i] > max_val) {
+			max_index = i;
+			max_val = adc_val[i];
+		}
+	}
+
+	// Calculate puck angle from robot
+	if (max_index >= 0) {
+		puck_theta = robot_theta[0]*RAD2DEG + max_index*45.0;
+		puck_unseen = 0;
+	} else {
+		puck_unseen = 1;
+	}
 }
 
 // Choose Strategy
