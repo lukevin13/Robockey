@@ -12,7 +12,7 @@
 #define DEBUG_TARGET	0
 #define DEBUG_MWII		0
 #define DEBUG_MRF		0
-#define DEBUG_ADC		0
+#define DEBUG_ADC		1
 
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
@@ -94,6 +94,8 @@ int main() {
 			drive();
 			update();
 		}
+
+		face();
 
 		debug();
 	}
@@ -372,16 +374,26 @@ void findPuck() {
 	int max_val = 0;
 	int i;
 	for (i=0;i<NUM_ADC;i++) {
-		if (adc_val[i] > max_val) {
+		if (adc_val[i] > max_val && adc_val[i] > 10) {
 			max_index = i;
 			max_val = adc_val[i];
 		}
 	}
 
 	// Calculate puck angle from robot
+	// if (max_index >= 0) {
+	// 	puck_theta = robot_theta[0]*RAD2DEG + max_index*45.0;
+	// 	puck_unseen = 0;
+	// } else {
+	// 	puck_unseen = 1;
+	// }
+
 	if (max_index >= 0) {
-		puck_theta = robot_theta[0]*RAD2DEG + max_index*45.0;
 		puck_unseen = 0;
+		if (max_index == 0) puck_theta = robot_theta[0]*RAD2DEG - 45.0;
+		if (max_index == 1) puck_theta = robot_theta[0]*RAD2DEG;
+		if (max_index == 2) puck_theta = robot_theta[0]*RAD2DEG + 45.0;
+
 	} else {
 		puck_unseen = 1;
 	}
@@ -389,7 +401,8 @@ void findPuck() {
 
 // Choose Strategy
 void chooseStrategy() {
-	
+	// Hunt puck
+	target_theta[0] = puck_theta;
 }
 
 // Drive motors to target location
@@ -532,7 +545,9 @@ void debug() {
 			m_usb_tx_string(", ");
 		}
 		m_usb_tx_uint(adc_val[NUM_ADC-1]);
-		m_usb_tx_string("]\n");
+		m_usb_tx_string("] Puck Theta: ");
+		m_usb_tx_int((int) puck_theta);
+		m_usb_tx_string("\n");
 	}
 
 }
