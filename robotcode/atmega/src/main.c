@@ -17,9 +17,10 @@
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
 #define PACKET_LENGTH	10
-#define NUM_ADC			3
+#define NUM_ADC			8
 #define RAD2DEG 		180/3.14
-#define FORTYFIVEDEG	0.7854
+// #define FORTYFIVEDEG	0.7854
+#define FORTYFIVEDEG	0.2
 
 #define COM_COMTEST		((char) 0xA0)
 #define COM_PLAY		((char) 0xA1)
@@ -71,6 +72,11 @@ void findPuck();
 void adc0();
 void adc1();
 void adc4();
+void adc5();
+void adc6();
+void adc7();
+void adc8();
+void adc9();
 void chooseStrategy();
 void face();
 void forward();
@@ -319,66 +325,6 @@ void calculateAngleToGoal() {
 	goal_theta[0] = atan2(1,0) - atan2(vector[1],vector[0]);
 }
 
-// Read ADC ports
-void adc0() {
-	// Disable ADC
-	clear(ADCSRA, ADEN);
-
-	// F0
-	clear(ADCSRB, MUX5);
-	clear(ADMUX, MUX2);
-	clear(ADMUX, MUX1);
-	clear(ADMUX, MUX0);
-
-	// Enable ADC and start conversion
-	set(ADCSRA, ADEN);
-	set(ADCSRA, ADSC);
-
-	// Wait for conversion to complete and clear flag
-	while(!check(ADCSRA, ADIF));
-	adc_val[0] = ADC;
-	set(ADCSRA, ADIF);
-}
-
-void adc1() {
-	// Disable ADC
-	clear(ADCSRA, ADEN);
-
-	// F0
-	clear(ADCSRB, MUX5);
-	clear(ADMUX, MUX2);
-	clear(ADMUX, MUX1);
-	set(ADMUX, MUX0);
-
-	// Enable ADC and start conversion
-	set(ADCSRA, ADEN);
-	set(ADCSRA, ADSC);
-
-	// Wait for conversion to complete and clear flag
-	while(!check(ADCSRA, ADIF));
-	adc_val[1] = ADC;
-	set(ADCSRA, ADIF);
-}
-
-void adc4() {
-	// Disable ADC
-	clear(ADCSRA, ADEN);
-
-	// F0
-	clear(ADCSRB, MUX5);
-	set(ADMUX, MUX2);
-	clear(ADMUX, MUX1);
-	clear(ADMUX, MUX0);
-
-	// Enable ADC and start conversion
-	set(ADCSRA, ADEN);
-	set(ADCSRA, ADSC);
-
-	// Wait for conversion to complete and clear flag
-	while(!check(ADCSRA, ADIF));
-	adc_val[2] = ADC;
-	set(ADCSRA, ADIF);
-}
 
 // Find the puck
 void findPuck() {
@@ -386,12 +332,17 @@ void findPuck() {
 	adc0();
 	adc1();
 	adc4();
+	adc5();
+	adc6();
+	adc7();
+	adc8();
+	adc9();
 
 	// Determine max
 	int max_index = -1;
 	int max_val = 0;
 	int i;
-	for (i=0;i<NUM_ADC;i++) {
+	for (i=0;i<3;i++) {
 		if (adc_val[i] > max_val && adc_val[i] > 10) {
 			max_index = i;
 			max_val = adc_val[i];
@@ -429,7 +380,8 @@ void chooseStrategy() {
 		}
 	}
 	else {
-		turn_off_wheels();
+		target_pos = goal_pos;
+		target_theta = goal_theta;
 	}
 }
 
@@ -603,4 +555,166 @@ void ledOff() {
 void ledToggle() {
 	if (led_on_flag) ledOff();
 	else ledOn();
+}
+
+
+// Read ADC ports
+void adc0() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F0
+	clear(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[0] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc1() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F1
+	clear(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	set(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[1] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc4() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F4
+	clear(ADCSRB, MUX5);
+	set(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[2] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc5() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F5
+	clear(ADCSRB, MUX5);
+	set(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	set(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[3] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc6() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F6
+	clear(ADCSRB, MUX5);
+	set(ADMUX, MUX2);
+	set(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[4] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc7() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// F7
+	clear(ADCSRB, MUX5);
+	set(ADMUX, MUX2);
+	set(ADMUX, MUX1);
+	set(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[5] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc8() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// D4
+	set(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	clear(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[6] = ADC;
+	set(ADCSRA, ADIF);
+}
+
+void adc9() {
+	// Disable ADC
+	clear(ADCSRA, ADEN);
+
+	// D6
+	set(ADCSRB, MUX5);
+	clear(ADMUX, MUX2);
+	clear(ADMUX, MUX1);
+	set(ADMUX, MUX0);
+
+	// Enable ADC and start conversion
+	set(ADCSRA, ADEN);
+	set(ADCSRA, ADSC);
+
+	// Wait for conversion to complete and clear flag
+	while(!check(ADCSRA, ADIF));
+	adc_val[7] = ADC;
+	set(ADCSRA, ADIF);
 }
