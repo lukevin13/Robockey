@@ -19,6 +19,7 @@
 #define PACKET_LENGTH	10
 #define NUM_ADC			3
 #define RAD2DEG 		180/3.14
+#define FORTYFIVEDEG	0.7854
 
 #define COM_COMTEST		((char) 0xA0)
 #define COM_PLAY		((char) 0xA1)
@@ -39,6 +40,7 @@ volatile int rf_debug_flag = 0;
 volatile int lost_flag = 0;
 volatile int led_on_flag = 0;
 volatile int puck_unseen = 0;
+volatile int have_puck = 0;
 
 char mrf_buffer[PACKET_LENGTH];
 unsigned int mWii_buffer[12];
@@ -53,6 +55,8 @@ double target_theta[1];
 double goal_dist;
 double target_dist;
 double puck_theta;
+
+double last_dtheta;
 
 // Function Declarations
 void init();
@@ -69,6 +73,7 @@ void adc1();
 void adc4();
 void chooseStrategy();
 void face();
+void forward();
 void drive();
 void left_drive();
 void right_drive();
@@ -85,18 +90,30 @@ int main() {
 
 	while (1) {
 		checkRF();
-		
-		if (state == 1) {
-			localize();
-			calculateAngleToGoal();
-			findPuck();
-			chooseStrategy();
-			drive();
-			update();
+
+		switch (state) {
+			case 0: {
+				if (check(TIFR3, OCF3A)) {
+					set(TIFR3, OCF3A);
+					ledToggle();
+				}
+				break;
+			}
+			case 1: {
+				localize();
+				calculateAngleToGoal();
+				findPuck();
+				chooseStrategy();
+				drive();
+				update();
+				break;
+			}
+			default: {
+
+			}
 		}
 
 		face();
-
 		debug();
 	}
 
@@ -236,6 +253,7 @@ void checkRF() {
 		if (var == COM_COMTEST) state = 0;
 		else if (var == COM_PLAY) {
 			state = 1;
+			ledOff();
 			ledOn();
 		}
 		else if (var == COM_HALFTIME) {
@@ -390,19 +408,29 @@ void findPuck() {
 
 	if (max_index >= 0) {
 		puck_unseen = 0;
-		if (max_index == 0) puck_theta = robot_theta[0]*RAD2DEG - 45.0;
-		if (max_index == 1) puck_theta = robot_theta[0]*RAD2DEG;
-		if (max_index == 2) puck_theta = robot_theta[0]*RAD2DEG + 45.0;
-
+		if (max_index == 0) puck_theta = robot_theta[0] + FORTYFIVEDEG;
+		if (max_index == 1) puck_theta = robot_theta[0];
+		if (max_index == 2) puck_theta = robot_theta[0] - FORTYFIVEDEG;
 	} else {
 		puck_unseen = 1;
 	}
+	if (max_val >= 997) have_puck = 1;
+	else have_puck = 0;	
 }
 
 // Choose Strategy
 void chooseStrategy() {
 	// Hunt puck
-	target_theta[0] = puck_theta;
+	if (!have_puck) {
+		target_theta[0] = puck_theta;
+		if (abs(puck_theta - robot_theta[0]) < 0.2) {
+			if (!puck_unseen) forward();
+			else turn_off_wheels();
+		}
+	}
+	else {
+		turn_off_wheels();
+	}
 }
 
 // Drive motors to target location
@@ -439,12 +467,18 @@ void face() {
 	if (theta <= -180) theta += 360;
 
 	if (theta < -5) {
-		left_drive(80);
-		right_drive(-80);
+		left_drive(90);
+		right_drive(-90);
 	} else if (theta > 5) {
-		left_drive(-80);
-		right_drive(80);
+		left_drive(-90);
+		right_drive(90);
 	}
+}
+
+// Forward
+void forward() {
+	left_drive(90);
+	right_drive(90);
 }
 
 // Left motor. direction B0, pwm OCR1B
@@ -547,6 +581,8 @@ void debug() {
 		m_usb_tx_uint(adc_val[NUM_ADC-1]);
 		m_usb_tx_string("] Puck Theta: ");
 		m_usb_tx_int((int) puck_theta);
+		m_usb_tx_string(" Have puck: ");
+		m_usb_tx_int(have_puck);
 		m_usb_tx_string("\n");
 	}
 
