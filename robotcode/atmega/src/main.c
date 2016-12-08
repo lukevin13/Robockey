@@ -19,8 +19,8 @@
 #define PACKET_LENGTH	10
 #define NUM_ADC			8
 #define RAD2DEG 		180/3.14
-// #define FORTYFIVEDEG	0.7854
-#define FORTYFIVEDEG	0.2
+#define FORTYFIVEDEG	0.7854
+// #define FORTYFIVEDEG	0.2
 
 #define COM_COMTEST		((char) 0xA0)
 #define COM_PLAY		((char) 0xA1)
@@ -31,7 +31,7 @@
 
 
 // Volatiles
-volatile int redTeam = 1;		// 0: Blue Team, 1: Red Team
+volatile int redTeam = 0;		// 0: Blue Team, 1: Red Team
 volatile int scoreRed = 0;
 volatile int scoreBlue = 0;
 
@@ -94,6 +94,15 @@ void ledToggle();
 int main() {
 	init();
 
+	if (redTeam) {
+		goal_pos[0] = 10;
+		goal_pos[1] = -120.0;
+	} 
+	else {
+		goal_pos[0] = 10;
+		goal_pos[0] = 120.0;
+	}
+
 	while (1) {
 		checkRF();
 
@@ -110,7 +119,6 @@ int main() {
 				calculateAngleToGoal();
 				findPuck();
 				chooseStrategy();
-				drive();
 				update();
 				break;
 			}
@@ -119,7 +127,6 @@ int main() {
 			}
 		}
 
-		face();
 		debug();
 	}
 
@@ -282,6 +289,7 @@ void checkRF() {
 		if (mrf_buffer[0] == 0xA2 || mrf_buffer[0] == 0xA3) {
 			scoreRed = mrf_buffer[1];
 			scoreBlue = mrf_buffer[2];
+			turn_off_wheels();
 		}
 
 		// Custom commands
@@ -348,40 +356,25 @@ void findPuck() {
 			max_val = adc_val[i];
 		}
 	}
-
-	// Calculate puck angle from robot
-	// if (max_index >= 0) {
-	// 	puck_theta = robot_theta[0]*RAD2DEG + max_index*45.0;
-	// 	puck_unseen = 0;
-	// } else {
-	// 	puck_unseen = 1;
-	// }
-
-	if (max_index >= 0) {
-		puck_unseen = 0;
-		if (max_index == 0) puck_theta = robot_theta[0] + FORTYFIVEDEG;
-		if (max_index == 1) puck_theta = robot_theta[0];
-		if (max_index == 2) puck_theta = robot_theta[0] - FORTYFIVEDEG;
-	} else {
-		puck_unseen = 1;
-	}
-	if (max_val >= 997) have_puck = 1;
-	else have_puck = 0;	
+	if (max_index == -1) puck_unseen = 1;
+	else puck_unseen = 0;
+	if (max_index == 1 && max_val > 1020) have_puck = 1;
+	else have_puck = 0;
 }
 
 // Choose Strategy
 void chooseStrategy() {
-	// Hunt puck
 	if (!have_puck) {
-		target_theta[0] = puck_theta;
-		if (abs(puck_theta - robot_theta[0]) < 0.2) {
-			if (!puck_unseen) forward();
-			else turn_off_wheels();
+		if (!puck_unseen) {
+			right_drive(adc_val[1] - adc_val[0]);
+			left_drive(adc_val[1] - adc_val[2]);
+		} else {
+			right_drive(80);
+			left_drive(-80);
 		}
-	}
-	else {
-		target_pos = goal_pos;
-		target_theta = goal_theta;
+	} else {
+		right_drive(0);
+		left_drive(0);
 	}
 }
 
@@ -395,17 +388,15 @@ void drive() {
 	int r_value = 0;
 	if (target_dist > 1) {
 		if (abs(theta) < 5) {
+			left_drive(100);
+			right_drive(100);
+		} else if (abs(theta) < 15) {
 			l_value += 85;
 			r_value += 85;
-			if (theta < 0) {
-				l_value += 10;
-				r_value -= 10;
-			} else {
-				l_value -= 10;
-				r_value += 10;
-			}
-		left_drive(l_value);
-		right_drive(r_value);
+			l_value += -theta;
+			r_value += theta;
+			left_drive(l_value);
+			right_drive(r_value);
 		} else {
 			face();
 		}
@@ -418,10 +409,10 @@ void face() {
 	if (theta >= 180) theta -= 360;
 	if (theta <= -180) theta += 360;
 
-	if (theta < -5) {
+	if (theta < -15) {
 		left_drive(90);
 		right_drive(-90);
-	} else if (theta > 5) {
+	} else if (theta > 15) {
 		left_drive(-90);
 		right_drive(90);
 	}
@@ -532,7 +523,7 @@ void debug() {
 		}
 		m_usb_tx_uint(adc_val[NUM_ADC-1]);
 		m_usb_tx_string("] Puck Theta: ");
-		m_usb_tx_int((int) puck_theta);
+		m_usb_tx_int((int) puck_theta*RAD2DEG);
 		m_usb_tx_string(" Have puck: ");
 		m_usb_tx_int(have_puck);
 		m_usb_tx_string("\n");
