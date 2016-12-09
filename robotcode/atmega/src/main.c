@@ -7,12 +7,12 @@
 #include <math.h>
 
 // Constants
-#define SERIAL_DEBUG	0		// Serial debug
-#define DEBUG_ROBOT		0
+#define SERIAL_DEBUG	1		// Serial debug
+#define DEBUG_ROBOT		1
 #define DEBUG_TARGET	0
 #define DEBUG_MWII		0
 #define DEBUG_MRF		0
-#define DEBUG_ADC		1
+#define DEBUG_ADC		0
 
 #define CHANNEL			1
 #define ADDRESS			80 		// Robot1:80, Robot2:81, Robot3:82
@@ -31,7 +31,7 @@
 
 
 // Volatiles
-volatile int redTeam = 0;		// 0: Blue Team, 1: Red Team
+volatile int redTeam = 1;		// 0: Blue Team, 1: Red Team
 volatile int scoreRed = 0;
 volatile int scoreBlue = 0;
 
@@ -56,8 +56,8 @@ double target_theta[1];
 double goal_dist;
 double target_dist;
 double puck_theta;
-
-double last_dtheta;
+int pt = -1;
+double err;
 
 // Function Declarations
 void init();
@@ -95,13 +95,14 @@ int main() {
 	init();
 
 	if (redTeam) {
-		goal_pos[0] = 10;
+		goal_pos[0] = 20;
 		goal_pos[1] = -120.0;
 	} 
 	else {
-		goal_pos[0] = 10;
+		goal_pos[0] = 20;
 		goal_pos[0] = 120.0;
 	}
+	m_wait(1500);
 
 	while (1) {
 		checkRF();
@@ -118,7 +119,7 @@ int main() {
 				localize();
 				calculateAngleToGoal();
 				findPuck();
-				chooseStrategy();
+				// chooseStrategy();
 				update();
 				break;
 			}
@@ -200,7 +201,7 @@ void setupPWM() {
 	clear(TCCR1A, COM1C0);
 
 	// Set values
-	OCR1A = 1600; // 10kHz
+	OCR1A = 16000; // 1kHz
 	OCR1B = 0;
 	OCR1C = 0;
 
@@ -263,7 +264,10 @@ void checkRF() {
 		m_rf_read(mrf_buffer, PACKET_LENGTH);
 
 		int var = (int) mrf_buffer[0];
-		if (var == COM_COMTEST) state = 0;
+		if (var == COM_COMTEST) {
+			turn_off_wheels();
+			state = 0;
+		}
 		else if (var == COM_PLAY) {
 			state = 1;
 			ledOff();
@@ -353,28 +357,42 @@ void findPuck() {
 	for (i=0;i<3;i++) {
 		if (adc_val[i] > max_val && adc_val[i] > 10) {
 			max_index = i;
+			pt = i;
 			max_val = adc_val[i];
 		}
 	}
 	if (max_index == -1) puck_unseen = 1;
 	else puck_unseen = 0;
-	if (max_index == 1 && max_val > 1020) have_puck = 1;
-	else have_puck = 0;
+	if (max_index == 1 && max_val > 980) have_puck = 1;
+	// else have_puck = 0;
 }
 
 // Choose Strategy
 void chooseStrategy() {
+	have_puck = 1;
 	if (!have_puck) {
 		if (!puck_unseen) {
-			right_drive(adc_val[1] - adc_val[0]);
-			left_drive(adc_val[1] - adc_val[2]);
+			if (pt == 0) err = adc_val[1] - adc_val[0];
+			if (pt == 1) err = 0;
+			if (pt == 2) err = adc_val[1] - adc_val[2];
+			err *= 0.2;
+			right_drive(80 + err);
+			left_drive(80 + err);
 		} else {
-			right_drive(80);
-			left_drive(-80);
+			if (pt <= 0) {
+				right_drive(-75);
+				left_drive(75);
+			} else if (pt == 2) {
+				right_drive(75);
+				left_drive(-75);
+			}
 		}
 	} else {
-		right_drive(0);
-		left_drive(0);
+		target_theta[0] = goal_theta[0];
+		target_pos[0] =  goal_pos[0];
+		target_pos[1] = goal_pos[1];
+		if (!lost_flag) drive();
+		// turn_off_wheels();
 	}
 }
 
@@ -383,23 +401,11 @@ void drive() {
 	double theta = (-target_theta[0]-robot_theta[0])*RAD2DEG;
 	if (theta >= 180) theta -= 360;
 	if (theta <= -180) theta += 360;
+	theta = theta * 0.4;
 
-	int l_value = 0;
-	int r_value = 0;
 	if (target_dist > 1) {
-		if (abs(theta) < 5) {
-			left_drive(100);
-			right_drive(100);
-		} else if (abs(theta) < 15) {
-			l_value += 85;
-			r_value += 85;
-			l_value += -theta;
-			r_value += theta;
-			left_drive(l_value);
-			right_drive(r_value);
-		} else {
-			face();
-		}
+		right_drive(20+theta);
+		left_drive(20-theta);
 	}
 }
 
@@ -420,28 +426,28 @@ void face() {
 
 // Forward
 void forward() {
-	left_drive(90);
-	right_drive(90);
+	left_drive(40);
+	right_drive(40);
 }
 
 // Left motor. direction B0, pwm OCR1B
 void right_drive(int value) {
-	if (value < 0) clear(PORTB, 0);
+	if (value > 0) clear(PORTB, 0);
 	else set(PORTB, 0);
 	if (abs(value) < 2) OCR1B = 0;
 	else {
-		double dt = 1600.0*(abs(value)/100.0);
+		double dt = 16000.0*(abs(value)/100.0);
 		OCR1B = (int)dt;
 	}
 }
 
 // Right motor. direction B1, pwm OCR1C
 void left_drive(int value) {
-	if (value > 0) clear(PORTB, 1);
+	if (value < 0) clear(PORTB, 1);
 	else set(PORTB, 1);
 	if (abs(value) < 2) OCR1C = 0;
 	else {
-		double dt = 1600.0*(abs(value)/100.0);
+		double dt = 16000.0*(abs(value)/100.0);
 		OCR1C = (int)dt;
 	}
 }
@@ -468,7 +474,7 @@ void debug() {
 		m_usb_tx_string(", ");
 		m_usb_tx_int((int)robot_pos[1]);
 		m_usb_tx_string(", ");
-		m_usb_tx_int((int)robot_theta[0]);
+		m_usb_tx_int((int)(robot_theta[0]*RAD2DEG));
 		m_usb_tx_string(")\n");
 	}
 
